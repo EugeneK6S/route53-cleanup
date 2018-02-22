@@ -26,6 +26,13 @@ version = '%(prog)s 1.0'
 usage = '%(prog)s --zoneid <ZoneID>'
 
 
+def options():
+    parser = argparse.ArgumentParser(usage=usage, description=description)
+    # parser.add_argument('-d', '--dry-run', dest='dryrun', action='store')
+    parser.add_argument('-d', '--dry', help='Dry run', action='store_true')
+    args = parser.parse_args()
+    return args
+
 class CommandArgs(object):
     zoneid = ""
     region = ""
@@ -82,12 +89,13 @@ def get_route53(args):
     return route53_ips
 
 
-def lambda_handler(event, context):
+def lambda_handler():
     conn = Route53Connection()
     zones = conn.get_all_hosted_zones()
     for zone in zones['ListHostedZonesResponse']['HostedZones']:
         zone_id = zone['Id'].replace('/hostedzone/', '')
         args = CommandArgs(zone_id, 'eu-central-1')
+        option = options()
 
         print "Working with %s" % zone_id
 
@@ -106,6 +114,8 @@ def lambda_handler(event, context):
                 report_ips[name] = ip
 
         print report_ips.items()
+        # print option.dry
+
         if len(report_ips) != 0:
             for name, ip in sorted(report_ips.items()):
                 if re.match('[\d\.]+', ip):
@@ -114,9 +124,11 @@ def lambda_handler(event, context):
                     change.add_value(ip)
                 else:
                     print "CNAME;%s;%s" % (ip, name)
-            changes.commit()
+            if not option.dry: 
+                print 'Deleting records...'
+                changes.commit()
         print 'Deleted records: '
         pprint.pprint(changes)
 
-# if __name__ == '__main__':
-#     lambda_handler()
+if __name__ == '__main__':
+    lambda_handler()
