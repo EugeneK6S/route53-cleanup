@@ -28,7 +28,6 @@ usage = '%(prog)s --zoneid <ZoneID>'
 
 def options():
     parser = argparse.ArgumentParser(usage=usage, description=description)
-    # parser.add_argument('-d', '--dry-run', dest='dryrun', action='store')
     parser.add_argument('-d', '--dry', help='Dry run', action='store_true')
     args = parser.parse_args()
     return args
@@ -89,7 +88,7 @@ def get_route53(args):
     return route53_ips
 
 
-def lambda_handler():
+def lambda_handler(event, context):
     conn = Route53Connection()
     zones = conn.get_all_hosted_zones()
     for zone in zones['ListHostedZonesResponse']['HostedZones']:
@@ -114,7 +113,6 @@ def lambda_handler():
                 report_ips[name] = ip
 
         print report_ips.items()
-        # print option.dry
 
         if len(report_ips) != 0:
             for name, ip in sorted(report_ips.items()):
@@ -127,8 +125,4 @@ def lambda_handler():
             if not option.dry: 
                 print 'Deleting records...'
                 changes.commit()
-        print 'Deleted records: '
         pprint.pprint(changes)
-
-if __name__ == '__main__':
-    lambda_handler()
